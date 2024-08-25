@@ -19,6 +19,7 @@ public class CouponController {
 
     @Autowired
     private CouponRepository couponRepository;
+    private CouponService couponService;
 
     @GetMapping("/")
     public List<Coupon> getAllCoupons() {
@@ -57,5 +58,14 @@ public class CouponController {
     public String deleteCoupon(@PathVariable String id) {
         couponRepository.deleteById(id);
         return id;
+    }
+    @PostMapping("/apply-coupon/{id}")
+    public Cart applyCoupon(@PathVariable String id, @RequestBody Cart cart) {
+        Coupon coupon = couponRepository.findById(id).orElse(null);
+        if (coupon != null) {
+            return couponService.applyCoupon(coupon, cart);
+        } else {
+            throw new RuntimeException("Coupon not found");
+        }
     }
 }
