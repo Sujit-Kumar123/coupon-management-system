@@ -1,6 +1,8 @@
 package io.sujit.rest;
 
 import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -59,6 +61,34 @@ public class CouponController {
         couponRepository.deleteById(id);
         return id;
     }
+
+    @PostMapping("/applicable-coupons")
+    public List<Coupon> getApplicableCoupons(@RequestBody Cart cart) {
+        List<Coupon> allCoupons = couponRepository.findAll();
+        return allCoupons.stream()
+            .filter(coupon -> isCouponApplicable(coupon, cart))
+            .collect(Collectors.toList());
+    }
+
+    private boolean isCouponApplicable(Coupon coupon, Cart cart) {
+        switch (coupon.getCouponType().toLowerCase()) {
+            case "cart-wise":
+                return cart.getTotalAmount() > coupon.getMinCartValue();
+            case "product-wise":
+                return cart.getItems().stream()
+                    .anyMatch(item -> coupon.getApplicableProducts().contains(item.getProductId()));
+            case "bxgy":
+                long buyCount = cart.getItems().stream()
+                    .filter(item -> coupon.getBuyProducts().contains(item.getProductId()))
+                    .mapToInt(CartItem::getQuantity)
+                    .sum();
+                return buyCount >= coupon.getLimit();
+            default:
+                return false;
+        }
+    }
+
+
     @PostMapping("/apply-coupon/{id}")
     public Cart applyCoupon(@PathVariable String id, @RequestBody Cart cart) {
         Coupon coupon = couponRepository.findById(id).orElse(null);
